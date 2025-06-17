@@ -1,0 +1,41 @@
+#cloud-config
+users:
+  - name: ${username}
+    shell: /bin/bash
+    groups: sudo
+    ssh_authorized_keys:
+      - ${ssh_authorized_keys}
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+
+write_files:    
+  - path: /etc/netplan/50-cloud-init.yaml
+    permissions: '0600'
+    content: |
+      network:
+        version: 2
+        ethernets:
+          ens192:
+            addresses:
+              - ${ipv4_address}/24
+            routes:
+              - to: default
+                via: ${gateway}
+            nameservers:
+              search: [acme.internal]
+              addresses: [192.168.1.254]
+
+timezone: Europe/Rome
+
+hostname: ${hostname}
+
+runcmd:
+  - netplan apply
+
+  - apt-get update && apt-get upgrade -y
+  - apt-get install -y unattended-upgrades open-vm-tools curl nano ca-certificates apt-transport-https gnupg lsb-release fzf gdu ldnsutils
+  
+  - systemctl enable --now unattended-upgrades
+
+power_state:
+  mode: reboot
+  message: "Rebooting... Applying latest changes"
